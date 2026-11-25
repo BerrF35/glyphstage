@@ -20,6 +20,12 @@ import {
 import { PALETTES } from '@/engine/presets/palettes';
 import { SCENE_MAP, SCENES, WORLD_CATEGORIES } from '@/engine/presets/scenes';
 import { FONTS, STYLES } from '@/engine/presets/styles';
+import {
+  formatCompactCount,
+  sortWorlds,
+  type WorldSortMode,
+  type WorldStatsMap,
+} from '@/engine/stats/worldStats';
 import { getBuiltInStudies } from '@/engine/webgl/studies';
 import type { MediaInputController } from '@/hooks/useMediaInput';
 import type {
@@ -49,6 +55,7 @@ interface InspectorProps {
   media: MediaInputController;
   matchLook: boolean;
   favorites: SceneId[];
+  stats: WorldStatsMap;
   audioEnergy: number;
   audioError: string | null;
   onTabChange: (tab: InspectorTab) => void;
@@ -83,6 +90,7 @@ export function Inspector({
   media,
   matchLook,
   favorites,
+  stats,
   audioEnergy,
   audioError,
   onTabChange,
@@ -106,6 +114,7 @@ export function Inspector({
   const fileRef = useRef<HTMLInputElement>(null);
   const studies = getBuiltInStudies();
   const [worldCat, setWorldCat] = useState<'all' | 'favorites' | WorldCategory>('all');
+  const [worldSort, setWorldSort] = useState<WorldSortMode>('curated');
   const activeMediumSpec = MEDIUM_MAP[state.medium];
   const activeFamily: MediumFamily = activeMediumSpec?.family ?? 'ascii';
   const [browseFamily, setBrowseFamily] = useState<MediumFamily>(activeFamily);
@@ -115,12 +124,13 @@ export function Inspector({
   const effectiveFamily = browseFamily;
   const visibleMedia = getMediaByFamily(effectiveFamily);
 
-  const visibleScenes =
+  const filteredScenes =
     worldCat === 'all'
       ? SCENES
       : worldCat === 'favorites'
         ? SCENES.filter((s) => favorites.includes(s.id))
         : SCENES.filter((s) => s.category === worldCat);
+  const visibleScenes = sortWorlds(filteredScenes, stats, worldSort);
 
   const activeIsSim = state.scene !== 'media' && Boolean(SCENE_MAP[state.scene]?.isStateful);
 
@@ -709,15 +719,28 @@ export function Inspector({
                 <span className="text-xs font-semibold text-[#f2f4f7]">
                   Worlds ({visibleScenes.length})
                 </span>
-                <label className="inline-flex items-center gap-1 text-[11px] text-[#8d95a5] cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={matchLook}
-                    onChange={(e) => onToggleMatchLook(e.target.checked)}
-                    className="w-3 h-3 rounded accent-[#f59e0b]"
-                  />
-                  <span>Match look</span>
-                </label>
+                <div className="flex items-center gap-2">
+                  <select
+                    aria-label="Sort worlds in sidebar"
+                    value={worldSort}
+                    onChange={(e) => setWorldSort(e.target.value as WorldSortMode)}
+                    className="h-6 px-1.5 rounded bg-[#14171e] border border-[#262b36] text-[10px] font-medium text-[#c8ced8] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#f59e0b]"
+                  >
+                    <option value="curated">Curated</option>
+                    <option value="stars">Top ★</option>
+                    <option value="views">Views</option>
+                    <option value="az">A–Z</option>
+                  </select>
+                  <label className="inline-flex items-center gap-1 text-[11px] text-[#8d95a5] cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={matchLook}
+                      onChange={(e) => onToggleMatchLook(e.target.checked)}
+                      className="w-3 h-3 rounded accent-[#f59e0b]"
+                    />
+                    <span>Match</span>
+                  </label>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-1">
@@ -768,6 +791,7 @@ export function Inspector({
                 ) : (
                   visibleScenes.map((scene) => {
                     const active = scene.id === state.scene;
+                    const starN = stats[scene.id]?.stars ?? 0;
                     return (
                       <button
                         key={scene.id}
@@ -779,7 +803,14 @@ export function Inspector({
                             : 'bg-[#12151b] border-[#1f232c] text-[#c8ced8] hover:border-[#323846]'
                         }`}
                       >
-                        <div className="text-xs font-medium truncate">{scene.name}</div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-medium truncate">{scene.name}</span>
+                          {starN > 0 && (
+                            <span className="font-mono-num text-[9px] text-[#f59e0b] shrink-0">
+                              ★{formatCompactCount(starN)}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] text-[#7b8494] truncate">{scene.reference}</div>
                       </button>
                     );

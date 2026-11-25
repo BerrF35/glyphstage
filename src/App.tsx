@@ -14,6 +14,7 @@ import { getBuiltInStudies } from '@/engine/webgl/studies';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { useMediaInput } from '@/hooks/useMediaInput';
 import { useStudioState } from '@/hooks/useStudioState';
+import { useWorldStats } from '@/hooks/useWorldStats';
 import type { FrameMetrics, SceneId, StudyId } from '@/types/studio';
 
 export default function App() {
@@ -37,6 +38,18 @@ export default function App() {
     undo,
     redo,
   } = useStudioState();
+
+  const { stats, voteStar } = useWorldStats(state.scene);
+
+  const handleToggleStar = useCallback(
+    (id: SceneId) => {
+      if (id === 'media') return;
+      const willBeStarred = !favorites.includes(id);
+      toggleFavorite(id);
+      voteStar(id, willBeStarred);
+    },
+    [favorites, toggleFavorite, voteStar]
+  );
 
   const [paused, setPaused] = useState(false);
   const [chromeHidden, setChromeHidden] = useState(false);
@@ -256,6 +269,7 @@ export default function App() {
             media={media}
             matchLook={matchWorldLook}
             favorites={favorites}
+            stats={stats}
             audioEnergy={metrics.audioEnergy ?? 0}
             audioError={audioError}
             onTabChange={setInspectorTab}
@@ -293,10 +307,13 @@ export default function App() {
       {!chromeHidden && (
         <DockBar
           activeScene={state.scene}
+          activeStarred={state.scene !== 'media' && favorites.includes(state.scene)}
+          activeStarCount={state.scene === 'media' ? 0 : (stats[state.scene]?.stars ?? 0)}
           paused={paused}
           tourActive={tourActive}
           metrics={metrics}
           onSelectScene={handleSelectScene}
+          onToggleStarActive={() => handleToggleStar(state.scene)}
           onStepScene={handleStepScene}
           onShuffle={handleShuffle}
           onToggleTour={() => setTourActive((t) => !t)}
@@ -315,9 +332,10 @@ export default function App() {
         activeScene={state.scene}
         matchLook={matchWorldLook}
         favorites={favorites}
+        stats={stats}
         thumbs={thumbs}
         onRequestThumb={handleRequestThumb}
-        onToggleFavorite={toggleFavorite}
+        onToggleFavorite={handleToggleStar}
         onToggleMatchLook={setMatchWorldLook}
         onSelectScene={handleSelectScene}
         onShuffle={handleShuffle}

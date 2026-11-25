@@ -9,18 +9,23 @@ import {
   RotateCcw,
   Shuffle,
   Sparkles,
+  Star,
   Tv,
   Undo2,
 } from 'lucide-react';
 import { SCENE_MAP, SCENES, WORLD_CATEGORIES } from '@/engine/presets/scenes';
+import { formatCompactCount } from '@/engine/stats/worldStats';
 import type { FrameMetrics, SceneId } from '@/types/studio';
 
 interface DockBarProps {
   activeScene: SceneId;
+  activeStarred: boolean;
+  activeStarCount: number;
   paused: boolean;
   tourActive: boolean;
   metrics: FrameMetrics;
   onSelectScene: (id: SceneId, matchLook?: boolean) => void;
+  onToggleStarActive: () => void;
   onStepScene: (delta: number) => void;
   onShuffle: () => void;
   onToggleTour: () => void;
@@ -35,10 +40,13 @@ interface DockBarProps {
 
 export function DockBar({
   activeScene,
+  activeStarred,
+  activeStarCount,
   paused,
   tourActive,
   metrics,
   onSelectScene,
+  onToggleStarActive,
   onStepScene,
   onShuffle,
   onToggleTour,
@@ -146,6 +154,24 @@ export function DockBar({
       </nav>
 
       <div className="flex items-center gap-0.5 shrink-0">
+        {activeScene !== 'media' && (
+          <button
+            type="button"
+            onClick={onToggleStarActive}
+            aria-pressed={activeStarred}
+            aria-label={activeStarred ? `Unstar current world (${activeStarCount})` : `Star current world (${activeStarCount})`}
+            title={activeStarred ? 'Remove star from active world' : 'Star active world'}
+            className={`inline-flex items-center gap-1 h-7 px-2 mr-1 rounded border font-mono-num text-[11px] font-medium cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[#f59e0b] active:scale-[0.96] ${
+              activeStarred
+                ? 'bg-[#1e1b14] text-[#f59e0b] border-[#f59e0b]/45'
+                : 'bg-[#111318] text-[#c8ced8] border-[#252932] hover:border-[#373d4a] hover:text-[#f59e0b]'
+            }`}
+          >
+            <Star className={`w-3 h-3 ${activeStarred ? 'fill-current' : ''}`} strokeWidth={1.75} />
+            <span>{formatCompactCount(activeStarCount)}</span>
+          </button>
+        )}
+
         <span className="hidden xl:inline-block font-mono-num text-[11px] text-[#7b8494] pr-2 mr-1 border-r border-[#1e2128]">
           {metrics.fps} fps · {metrics.cols}×{metrics.rows}
         </span>

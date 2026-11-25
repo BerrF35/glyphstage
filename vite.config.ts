@@ -18,6 +18,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
+            return 'firebase';
+          }
           if (id.includes('node_modules')) return 'vendor';
           if (id.includes('/engine/shaders/worlds/')) return 'worlds';
           if (id.includes('/engine/shaders/media/')) return 'media-shaders';

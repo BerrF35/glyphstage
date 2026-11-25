@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Shuffle, Star, X } from 'lucide-react';
+import { ArrowUpDown, Eye, Search, Shuffle, Star, X } from 'lucide-react';
 import { PALETTE_MAP } from '@/engine/presets/palettes';
 import { SCENES, WORLD_CATEGORIES } from '@/engine/presets/scenes';
 import { STYLE_MAP } from '@/engine/presets/styles';
+import {
+  formatCompactCount,
+  sortWorlds,
+  type WorldSortMode,
+  type WorldStatsMap,
+} from '@/engine/stats/worldStats';
 import type { SceneId, WorldCategory } from '@/types/studio';
 
 interface WorldBrowserProps {
@@ -10,6 +16,7 @@ interface WorldBrowserProps {
   activeScene: SceneId;
   matchLook: boolean;
   favorites: SceneId[];
+  stats: WorldStatsMap;
   thumbs: Record<string, string>;
   onRequestThumb: (sceneId: Exclude<SceneId, 'media'>) => void;
   onToggleFavorite: (id: SceneId) => void;
@@ -24,6 +31,7 @@ export function WorldBrowser({
   activeScene,
   matchLook,
   favorites,
+  stats,
   thumbs,
   onRequestThumb,
   onToggleFavorite,
@@ -34,6 +42,7 @@ export function WorldBrowser({
 }: WorldBrowserProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [category, setCategory] = useState<'all' | 'favorites' | WorldCategory>('all');
+  const [sortBy, setSortBy] = useState<WorldSortMode>('curated');
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -74,7 +83,7 @@ export function WorldBrowser({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return SCENES.filter((scene) => {
+    const matched = SCENES.filter((scene) => {
       if (category === 'favorites') {
         if (!favorites.includes(scene.id)) return false;
       } else if (category !== 'all' && scene.category !== category) {
@@ -88,7 +97,8 @@ export function WorldBrowser({
         scene.suggestedStyle.toLowerCase().includes(q)
       );
     });
-  }, [category, query, favorites]);
+    return sortWorlds(matched, stats, sortBy);
+  }, [category, query, favorites, stats, sortBy]);
 
   // Progressive non-blocking WebGL2 thumbnail generation for visible cards
   const thumbsRef = useRef(thumbs);
@@ -184,16 +194,36 @@ export function WorldBrowser({
         </div>
 
         <div className="px-4 py-2.5 border-b border-[#1e2128] flex flex-col gap-2 shrink-0 bg-[#0b0d10]">
-          <div className="relative w-full">
-            <Search className="w-3.5 h-3.5 text-[#646c7a] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="search"
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search ${SCENES.length} worlds, artists, sims (Gray-Scott, Quilez, Harri, play.core, Doom)...`}
-              className="w-full h-8 pl-8 pr-2.5 rounded bg-[#08090b] border border-[#232732] text-xs text-[#f2f4f7] placeholder:text-[#646c7a] focus-visible:outline-2 focus-visible:outline-[#f59e0b]"
-            />
+          <div className="flex items-center gap-2 w-full">
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-3.5 h-3.5 text-[#646c7a] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="search"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={`Search ${SCENES.length} worlds, artists, sims...`}
+                className="w-full h-8 pl-8 pr-2.5 rounded bg-[#08090b] border border-[#232732] text-xs text-[#f2f4f7] placeholder:text-[#646c7a] focus-visible:outline-2 focus-visible:outline-[#f59e0b]"
+              />
+            </div>
+
+            <div className="relative shrink-0 flex items-center">
+              <ArrowUpDown className="w-3 h-3 text-[#8d95a5] absolute left-2 pointer-events-none" />
+              <label htmlFor="world-sort-select" className="sr-only">
+                Sort worlds
+              </label>
+              <select
+                id="world-sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as WorldSortMode)}
+                className="h-8 pl-6 pr-2 rounded bg-[#14171e] border border-[#2a303d] text-xs font-medium text-[#f2f4f7] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#f59e0b]"
+              >
+                <option value="curated">Curated</option>
+                <option value="stars">Most Starred</option>
+                <option value="views">Most Viewed</option>
+                <option value="az">Name A–Z</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-1">
@@ -255,6 +285,8 @@ export function WorldBrowser({
                 const pal = PALETTE_MAP[scene.suggestedPalette];
                 const style = STYLE_MAP[scene.suggestedStyle];
                 const thumbUrl = thumbs[scene.id];
+                const starCount = stats[scene.id]?.stars ?? 0;
+                const viewCount = stats[scene.id]?.views ?? 0;
 
                 return (
                   <div
@@ -305,13 +337,22 @@ export function WorldBrowser({
                         <div className="text-[11px] text-[#7b8494] mt-0.5 truncate">
                           {scene.reference}
                         </div>
-                        <div className="mt-2 pt-1.5 border-t border-[#1e2128] flex items-center justify-between text-[10px] font-mono-num text-[#8d95a5]">
-                          <span>{style.shortName}</span>
-                          <span className="flex items-center gap-0.5 shrink-0" aria-hidden="true">
-                            <span className="w-2 h-2.5 rounded-[1px]" style={{ backgroundColor: pal.bg }} />
-                            <span className="w-2 h-2.5 rounded-[1px]" style={{ backgroundColor: pal.mid }} />
-                            <span className="w-2 h-2.5 rounded-[1px]" style={{ backgroundColor: pal.accent }} />
-                          </span>
+                        <div className="mt-2 pt-1.5 border-t border-[#1e2128] flex items-center justify-between gap-2 text-[10px] font-mono-num text-[#8d95a5]">
+                          <span className="truncate">{style.shortName}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[#7b8494]"
+                              title={`${viewCount} views`}
+                            >
+                              <Eye className="w-2.5 h-2.5" />
+                              <span>{formatCompactCount(viewCount)}</span>
+                            </span>
+                            <span className="flex items-center gap-0.5" aria-hidden="true">
+                              <span className="w-2 h-2.5 rounded-[1px]" style={{ backgroundColor: pal.bg }} />
+                              <span className="w-2 h-2.5 rounded-[1px]" style={{ backgroundColor: pal.mid }} />
+                              <span className="w-2 h-2.5 rounded-[1px]" style={{ backgroundColor: pal.accent }} />
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </button>
@@ -322,15 +363,17 @@ export function WorldBrowser({
                         e.stopPropagation();
                         onToggleFavorite(scene.id);
                       }}
-                      aria-label={isFav ? `Remove ${scene.name} from favorites` : `Save ${scene.name} to favorites`}
+                      aria-label={isFav ? `Unstar ${scene.name} (${starCount} stars)` : `Star ${scene.name} (${starCount} stars)`}
                       aria-pressed={isFav}
-                      className={`absolute top-1.5 right-1.5 w-6 h-6 rounded flex items-center justify-center cursor-pointer transition-colors ${
+                      title={isFav ? 'Remove star' : 'Star this world'}
+                      className={`absolute top-1.5 right-1.5 h-6 px-1.5 rounded flex items-center justify-center gap-1 font-mono-num text-[11px] font-medium cursor-pointer transition-colors active:scale-[0.95] ${
                         isFav
-                          ? 'bg-[#08090b]/85 text-[#f59e0b] border border-[#f59e0b]/50'
-                          : 'bg-[#08090b]/70 text-[#8d95a5] hover:text-[#f2f4f7] border border-[#2a2f3a]/70'
+                          ? 'bg-[#08090b]/90 text-[#f59e0b] border border-[#f59e0b]/60'
+                          : 'bg-[#08090b]/75 text-[#c8ced8] hover:text-[#f59e0b] border border-[#2a2f3a]/80'
                       }`}
                     >
-                      <Star className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`} />
+                      <Star className={`w-3 h-3 ${isFav ? 'fill-current' : ''}`} />
+                      <span>{formatCompactCount(starCount)}</span>
                     </button>
                   </div>
                 );
