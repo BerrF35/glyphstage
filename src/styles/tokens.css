@@ -1,0 +1,30 @@
+:root {
+  color-scheme: dark;
+
+  --surface-0: #08090b;
+  --surface-1: #0e1014;
+  --surface-2: #15181e;
+  --surface-3: #1d212a;
+
+  --line-subtle: #1e2128;
+  --line-strong: #2d323d;
+
+  --ink-primary: #f2f4f7;
+  --ink-secondary: #98a0ae;
+  --ink-muted: #646c7a;
+
+  --accent: #f59e0b;
+  --accent-ink: #08090b;
+
+  --font-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  --scrollbar-thumb: #363c48;
+  --scrollbar-track: transparent;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  accent-color: var(--accent);
+}

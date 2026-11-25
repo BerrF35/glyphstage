@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+.taste-skill
+.playwright-mcp
+coverage

@@ -1,0 +1,17 @@
+{
+  "name": "glyphstage",
+  "short_name": "glyphstage",
+  "description": "Real-time WebGL2 3D procedural art studio — 60 worlds, Navier-Stokes fluid, 10 ASCII styles, and 21 painterly, ink, print, analog, mosaic, glitch, and optics media.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#08090b",
+  "theme_color": "#08090b",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
